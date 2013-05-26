@@ -1,8 +1,8 @@
 VERSION = $(shell git describe --tags)
 
 CFLAGS := -std=c99 \
-		-Wall -Wextra -pedantic \
-		${CFLAGS}
+	-Wall -Wextra -pedantic \
+	${CFLAGS}
 
 all: led
 
