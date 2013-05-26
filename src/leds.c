@@ -81,6 +81,24 @@ static int set_trigger(filepath_t path, const char *value)
     return 0;
 }
 
+static int get_trigger(filepath_t path, char *value)
+{
+    int fd =  open(path, O_RDONLY);
+    if (fd < 0) {
+        warn("failed to open to read from led %s", path);
+        return -1;
+    }
+
+    char buf[1024];
+    if (read(fd, buf, 1024) < 0)
+        err(EXIT_FAILURE, "failed to read %s", path);
+
+    strncpy(value, buf, 1024);
+
+    close(fd);
+    return 0;
+}
+
 static int in_trigger_array(const char *elem, const char **array)
 {
     int i;
@@ -94,16 +112,19 @@ static int in_trigger_array(const char *elem, const char **array)
     return 0;
 }
 
-
-int leds_init(struct leds_t *l, const char *color)
+static int led_init(struct leds_t *l, const char *color)
 {
     char *device;
-    if (strcmp(color, "blue") == 0)
+    struct led_t *led;
+    if (strcmp(color, "blue") == 0) {
         device = "blue:ph21:led2";
-    else if (strcmp(color, "green") == 0)
+        led = &(l->blue);
+    } else if (strcmp(color, "green") == 0) {
         device = "green:ph20:led1";
-    else
+        led = &(l->green);
+    } else {
         return -1;
+    }
 
     l->triggers[0] = "none";
     l->triggers[1] = "battery-charging-or-full";
@@ -117,48 +138,131 @@ int leds_init(struct leds_t *l, const char *color)
     l->triggers[9] = "mmc2";
     l->triggers[10] = "rfkill0";
 
-    snprintf(l->b_dev, PATH_MAX, LEDS_ROOT "/%s/brightness", device);
-    snprintf(l->t_dev, PATH_MAX, LEDS_ROOT "/%s/trigger", device);
+    snprintf(led->b_dev, PATH_MAX, LEDS_ROOT "/%s/brightness", device);
+    snprintf(led->t_dev, PATH_MAX, LEDS_ROOT "/%s/trigger", device);
     return 0;
 }
 
-int leds_status(struct leds_t *l)
+int leds_init(struct leds_t *l)
 {
+    if (led_init(l, "blue") < 0) {
+        return -1;
+    }
+    if (led_init(l, "green") < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+int leds_status(struct leds_t *l, const char *color)
+{
+    struct led_t *led;
+    if (strcmp(color, "blue") == 0) {
+        led = &(l->blue);
+    } else if (strcmp(color, "green") == 0) {
+        led = &(l->green);
+    } else {
+        return -1;
+    }
+
     long value = 0;
     int res = 0;
-    int rc = get(l->b_dev, &value);
+    int rc = get(led->b_dev, &value);
     if (value > 0) res = 1; 
     return rc ? rc : res;
 }
 
-int leds_on(struct leds_t *l)
+int leds_on(struct leds_t *l, const char *color)
 {
-    if (leds_status(l)) {
+    struct led_t *led;
+    if (strcmp(color, "blue") == 0) {
+        led = &(l->blue);
+    } else if (strcmp(color, "green") == 0) {
+        led = &(l->green);
+    } else {
+        return -1;
+    }
+
+    if (leds_status(l, color)) {
         return 1;
     }
 
-    return set(l->b_dev, 1);
+    return set(led->b_dev, 1);
 }
 
-int leds_off(struct leds_t *l)
+int leds_off(struct leds_t *l, const char *color)
 {
-    if (!leds_status(l)) {
+    struct led_t *led;
+    if (strcmp(color, "blue") == 0) {
+        led = &(l->blue);
+    } else if (strcmp(color, "green") == 0) {
+        led = &(l->green);
+    } else {
+        return -1;
+    }
+
+    if (!leds_status(l, color)) {
         return 0;
     }
 
-    return set(l->b_dev, 0);
+    return set(led->b_dev, 0);
 }
 
-int leds_trigger(struct leds_t *l, const char *trigger)
+int leds_trigger(struct leds_t *l, const char *color, const char *trigger)
 {
+    struct led_t *led;
+    if (strcmp(color, "blue") == 0) {
+        led = &(l->blue);
+    } else if (strcmp(color, "green") == 0) {
+        led = &(l->green);
+    } else {
+        return -1;
+    }
+
     if (in_trigger_array(trigger, l->triggers)) {
-        return set_trigger(l->t_dev, trigger);
+        return set_trigger(led->t_dev, trigger);
     }
     
     warn("incorrect trigger type");
-    return -1;
+    return -2;
 }
 
-/* char* leds_trigger_status(struct leds_t *l) */
-/* { */
-/* } */
+int leds_trigger_status(struct leds_t *l, const char *color, char *status)
+{
+    struct led_t *led;
+    if (strcmp(color, "blue") == 0) {
+        led = &(l->blue);
+    } else if (strcmp(color, "green") == 0) {
+        led = &(l->green);
+    } else {
+        return -1;
+    }
+
+    char value[1024];
+    int rc = get_trigger(led->t_dev, value);
+
+    if (rc < 0) {
+        return -1;
+    }
+
+    int i = 0;
+    while (1) {
+        if (value[i] == '[') {
+            int j = 0;
+            while (1) {
+                i++;
+                if (value[i] == ']') {
+                    status[j] = '\0';
+                    break;
+                } else {
+                    status[j] = value[i];
+                }
+                j++;
+            }
+            break;
+        }
+        i++;
+    }
+
+    return 0;
+}
