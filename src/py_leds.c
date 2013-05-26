@@ -171,12 +171,12 @@ py_trigger_status(PyObject *self, PyObject *args)
 }
 
 static char module_docstring[] =
-    "This module provides an interface for the leds on the cubieboard.";
-static char on_docstring[] = "Turn on led.";
-static char off_docstring[] = "Turn off led.";
+    "This module provides an interface to control the LEDs on the Cubieboard.";
+static char on_docstring[] = "Turn on LED.";
+static char off_docstring[] = "Turn off LED.";
 static char status_docstring[] = 
-    "Check status of led. Return 1 for on and 0 for off.";
-static char trigger_docstring[] = "Set led trigger.";
+    "Check status of LED. Return 1 for on and 0 for off.";
+static char trigger_docstring[] = "Set LED trigger.";
 static char trigger_status_docstring[] = "Read current trigger.";
 
 static PyMethodDef module_methods[] = {
