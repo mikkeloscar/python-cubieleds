@@ -4,3 +4,4 @@
 *.so
 src/led
 build
+dist
