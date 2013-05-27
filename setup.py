@@ -10,7 +10,7 @@ classifiers = ['Development Status :: 4 - Beta',
                'Topic :: System :: Hardware']
 
 
-setup(name          = 'Cubie.leds',
+setup(name          = 'cubieleds',
       version       = '0.1',
       author        = 'Mikkel Oscar Lyderik',
       author_email  = 'mikkeloscar@gmail.com',

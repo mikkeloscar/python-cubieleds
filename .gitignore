@@ -1,4 +1,5 @@
 *.pyc
+*.egg-info
 *.o
 *.so
 src/led
