@@ -14,6 +14,15 @@ I also had to load the module:
 
     leds_sunxi
 
+### Installation
+
+You can install using pip
+
+    $ pip install cubieleds
+
+If you are running Archlinux, PKGBUILDs for python2 and 3 are available
+[here](https://github.com/mikkeloscar/packages).
+
 ### Usage
 
 The module is pretty simpel. This is how it works:
