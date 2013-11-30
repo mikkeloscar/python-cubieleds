@@ -1,16 +1,16 @@
 /**
  * Copyright (C) 2013  Mikkel Oscar Lyderik
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -26,14 +26,15 @@
 typedef char filepath_t[PATH_MAX];
 
 struct led_t {
+    char *color;
     filepath_t b_dev;
     filepath_t t_dev;
 };
 
 struct leds_t {
     const char *triggers[LEDS_TRIGGERS];
-    struct led_t blue;
-    struct led_t green;
+    struct led_t *leds;
+    int num;
 };
 
 int leds_init(struct leds_t *l);

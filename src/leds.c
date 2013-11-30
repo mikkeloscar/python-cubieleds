@@ -1,16 +1,16 @@
 /**
  * Copyright (C) 2013  Mikkel Oscar Lyderik
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <err.h>
+#include <dirent.h>
 
 #include "leds.h"
 
@@ -104,26 +105,70 @@ static int in_trigger_array(const char *elem, const char **array)
     int i;
 
     for (i = 0; i < LEDS_TRIGGERS; i++) {
-        if (strcmp(elem, array[i]) == 0) {
+        if (strcmp(elem, array[i]) == 0)
             return 1;
-        }
     }
 
     return 0;
 }
 
-static int led_init(struct leds_t *l, const char *color)
+static int led_init(struct led_t *led, char *device)
 {
-    char *device;
-    struct led_t *led;
-    if (strcmp(color, "blue") == 0) {
-        device = "blue:ph21:led2";
-        led = &(l->blue);
-    } else if (strcmp(color, "green") == 0) {
-        device = "green:ph20:led1";
-        led = &(l->green);
-    } else {
-        return -1;
+    // make a copy of device to tokenize
+    char *tmp = malloc(strlen(device)+1);
+    if (tmp == NULL)
+        err(EXIT_FAILURE, "Out of memory");
+
+    strcpy(tmp, device);
+
+    // get color from device name
+    char *color = strtok(tmp, ":");
+
+    led->color = malloc(strlen(color));
+    if (led->color == NULL)
+        err(EXIT_FAILURE, "Out of memory");
+
+    strcpy(led->color, color);
+
+    snprintf(led->b_dev, PATH_MAX, LEDS_ROOT "/%s/brightness", device);
+    snprintf(led->t_dev, PATH_MAX, LEDS_ROOT "/%s/trigger", device);
+
+    return 0;
+}
+
+static struct led_t* get_led(struct leds_t *l, const char *color)
+{
+    for (int i = 0; i < l->num; i++) {
+        if (strcmp(l->leds[i].color, color) == 0)
+            return &(l->leds[i]);
+    }
+
+    return NULL;
+}
+
+int leds_init(struct leds_t *l)
+{
+    // list all devices and make a led_t struct from each of them
+    DIR *d;
+    int i = 0;
+    struct dirent *dir;
+    d = opendir(LEDS_ROOT);
+    if (d) {
+        while ((dir = readdir(d)) != NULL) {
+            if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0) {
+                i++;
+                if (i == 1)
+                    l->leds = malloc(sizeof(struct led_t));
+                else
+                    l->leds = realloc(l->leds, sizeof(struct led_t) * i);
+
+                struct led_t led;
+                led_init(&led, dir->d_name);
+                l->leds[i-1] = led;
+                l->num = i;
+            }
+        }
+        closedir(d);
     }
 
     l->triggers[0] = "none";
@@ -138,54 +183,36 @@ static int led_init(struct leds_t *l, const char *color)
     l->triggers[9] = "mmc2";
     l->triggers[10] = "rfkill0";
 
-    snprintf(led->b_dev, PATH_MAX, LEDS_ROOT "/%s/brightness", device);
-    snprintf(led->t_dev, PATH_MAX, LEDS_ROOT "/%s/trigger", device);
-    return 0;
-}
-
-int leds_init(struct leds_t *l)
-{
-    if (led_init(l, "blue") < 0) {
-        return -1;
-    }
-    if (led_init(l, "green") < 0) {
-        return -1;
-    }
     return 0;
 }
 
 int leds_status(struct leds_t *l, const char *color)
 {
     struct led_t *led;
-    if (strcmp(color, "blue") == 0) {
-        led = &(l->blue);
-    } else if (strcmp(color, "green") == 0) {
-        led = &(l->green);
-    } else {
+    led = get_led(l, color);
+    if (led == NULL) {
+        warn("%s LED not found", color);
         return -1;
     }
 
     long value = 0;
     int res = 0;
     int rc = get(led->b_dev, &value);
-    if (value > 0) res = 1; 
+    if (value > 0) res = 1;
     return rc ? rc : res;
 }
 
 int leds_on(struct leds_t *l, const char *color)
 {
     struct led_t *led;
-    if (strcmp(color, "blue") == 0) {
-        led = &(l->blue);
-    } else if (strcmp(color, "green") == 0) {
-        led = &(l->green);
-    } else {
+    led = get_led(l, color);
+    if (led == NULL) {
+        warn("%s LED not found", color);
         return -1;
     }
 
-    if (leds_status(l, color)) {
+    if (leds_status(l, color))
         return 1;
-    }
 
     return set(led->b_dev, 1);
 }
@@ -193,17 +220,14 @@ int leds_on(struct leds_t *l, const char *color)
 int leds_off(struct leds_t *l, const char *color)
 {
     struct led_t *led;
-    if (strcmp(color, "blue") == 0) {
-        led = &(l->blue);
-    } else if (strcmp(color, "green") == 0) {
-        led = &(l->green);
-    } else {
+    led = get_led(l, color);
+    if (led == NULL) {
+        warn("%s LED not found", color);
         return -1;
     }
 
-    if (!leds_status(l, color)) {
+    if (!leds_status(l, color))
         return 0;
-    }
 
     return set(led->b_dev, 0);
 }
@@ -211,18 +235,15 @@ int leds_off(struct leds_t *l, const char *color)
 int leds_trigger(struct leds_t *l, const char *color, const char *trigger)
 {
     struct led_t *led;
-    if (strcmp(color, "blue") == 0) {
-        led = &(l->blue);
-    } else if (strcmp(color, "green") == 0) {
-        led = &(l->green);
-    } else {
+    led = get_led(l, color);
+    if (led == NULL) {
+        warn("%s LED not found", color);
         return -1;
     }
 
-    if (in_trigger_array(trigger, l->triggers)) {
+    if (in_trigger_array(trigger, l->triggers))
         return set_trigger(led->t_dev, trigger);
-    }
-    
+
     warn("incorrect trigger type");
     return -2;
 }
@@ -230,20 +251,17 @@ int leds_trigger(struct leds_t *l, const char *color, const char *trigger)
 int leds_trigger_status(struct leds_t *l, const char *color, char *status)
 {
     struct led_t *led;
-    if (strcmp(color, "blue") == 0) {
-        led = &(l->blue);
-    } else if (strcmp(color, "green") == 0) {
-        led = &(l->green);
-    } else {
+    led = get_led(l, color);
+    if (led == NULL) {
+        warn("%s LED not found", color);
         return -1;
     }
 
     char value[1024];
     int rc = get_trigger(led->t_dev, value);
 
-    if (rc < 0) {
+    if (rc < 0)
         return -1;
-    }
 
     int i = 0;
     while (1) {
@@ -254,9 +272,8 @@ int leds_trigger_status(struct leds_t *l, const char *color, char *status)
                 if (value[i] == ']') {
                     status[j] = '\0';
                     break;
-                } else {
+                } else
                     status[j] = value[i];
-                }
                 j++;
             }
             break;
