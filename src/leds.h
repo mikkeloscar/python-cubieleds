@@ -21,7 +21,6 @@
 #include <limits.h>
 
 #define LEDS_ROOT "/sys/class/leds"
-#define LEDS_TRIGGERS 11
 
 typedef char filepath_t[PATH_MAX];
 
@@ -32,9 +31,10 @@ struct led_t {
 };
 
 struct leds_t {
-    const char *triggers[LEDS_TRIGGERS];
+    char **triggers;
+    int num_triggers;
     struct led_t *leds;
-    int num;
+    int num_leds;
 };
 
 int leds_init(struct leds_t *l);

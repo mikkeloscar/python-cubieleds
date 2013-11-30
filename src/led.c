@@ -28,10 +28,16 @@ int main()
     if (leds_init(&leds) < 0)
         return 1;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < leds.num_leds; i++) {
         printf("%s\n", leds.leds[i].color);
         printf("%s\n", leds.leds[i].b_dev);
         printf("%s\n", leds.leds[i].t_dev);
+    }
+
+    printf("triggers: %d\n", leds.num_triggers);
+
+    for (int i = 0; i < leds.num_triggers; i++) {
+        printf("%d: %s\n", i, leds.triggers[i]);
     }
 
     for (int i=0; i < 20; i++) {

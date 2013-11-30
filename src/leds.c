@@ -100,12 +100,12 @@ static int get_trigger(filepath_t path, char *value)
     return 0;
 }
 
-static int in_trigger_array(const char *elem, const char **array)
+static int in_trigger_array(const char *elem, struct leds_t *l)
 {
     int i;
 
-    for (i = 0; i < LEDS_TRIGGERS; i++) {
-        if (strcmp(elem, array[i]) == 0)
+    for (i = 0; i < l->num_triggers; i++) {
+        if (strcmp(elem, l->triggers[i]) == 0)
             return 1;
     }
 
@@ -138,7 +138,7 @@ static int led_init(struct led_t *led, char *device)
 
 static struct led_t* get_led(struct leds_t *l, const char *color)
 {
-    for (int i = 0; i < l->num; i++) {
+    for (int i = 0; i < l->num_leds; i++) {
         if (strcmp(l->leds[i].color, color) == 0)
             return &(l->leds[i]);
     }
@@ -152,6 +152,11 @@ int leds_init(struct leds_t *l)
     DIR *d;
     int i = 0;
     struct dirent *dir;
+
+    // initialize number of LEDs to 0
+    l->num_triggers = 0;
+    l->num_leds = 0;
+
     d = opendir(LEDS_ROOT);
     if (d) {
         while ((dir = readdir(d)) != NULL) {
@@ -165,23 +170,51 @@ int leds_init(struct leds_t *l)
                 struct led_t led;
                 led_init(&led, dir->d_name);
                 l->leds[i-1] = led;
-                l->num = i;
+                l->num_leds++;
             }
         }
         closedir(d);
     }
 
-    l->triggers[0] = "none";
-    l->triggers[1] = "battery-charging-or-full";
-    l->triggers[2] = "battery-charging";
-    l->triggers[3] = "battery-full";
-    l->triggers[4] = "battery-charging-blink-full-solid";
-    l->triggers[5] = "ac-online";
-    l->triggers[6] = "usb-online";
-    l->triggers[7] = "mmc0";
-    l->triggers[8] = "mmc1";
-    l->triggers[9] = "mmc2";
-    l->triggers[10] = "rfkill0";
+    // add triggers of the first LED and assume it's the same for all other
+    // LEDs in /sys/class/leds/
+    if (l->num_leds > 0) {
+        int j;
+        char *triggers, *token;
+        triggers = malloc(sizeof(char)*1024);
+        int rc = get_trigger(l->leds[0].t_dev, triggers);
+
+        if (rc < 0)
+            return -1;
+
+        token = strsep(&triggers, " ");
+        j = 0;
+        while (token && token[0] != '\n') {
+            if (j == 0)
+                l->triggers = malloc(sizeof(char *) * 1);
+            else
+                l->triggers = realloc(l->triggers, sizeof(char *) * (j+1));
+
+            if (token[0] == '[') {
+                int len = strlen(token) - 1;
+                l->triggers[j] = malloc(sizeof(char) * len);
+                for (int i = 0; i < len; i++) {
+                    if (i == len-1)
+                        l->triggers[j][i] = '\0';
+                    else
+                        l->triggers[j][i] = token[i+1];
+                }
+            } else {
+                l->triggers[j] = malloc(sizeof(char) * (strlen(token) + 1));
+                strcpy(l->triggers[j], token);
+            }
+
+            l->num_triggers++;
+            token = strsep(&triggers, " ");
+            j++;
+        }
+        free(triggers);
+    }
 
     return 0;
 }
@@ -241,7 +274,7 @@ int leds_trigger(struct leds_t *l, const char *color, const char *trigger)
         return -1;
     }
 
-    if (in_trigger_array(trigger, l->triggers))
+    if (in_trigger_array(trigger, l))
         return set_trigger(led->t_dev, trigger);
 
     warn("incorrect trigger type");
