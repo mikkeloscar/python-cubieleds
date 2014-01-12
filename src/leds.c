@@ -138,7 +138,9 @@ static int led_init(struct led_t *led, char *device)
 
 static struct led_t* get_led(struct leds_t *l, const char *color)
 {
-    for (int i = 0; i < l->num_leds; i++) {
+    int i;
+
+    for (i = 0; i < l->num_leds; i++) {
         if (strcmp(l->leds[i].color, color) == 0)
             return &(l->leds[i]);
     }
@@ -179,7 +181,7 @@ int leds_init(struct leds_t *l)
     // add triggers of the first LED and assume it's the same for all other
     // LEDs in /sys/class/leds/
     if (l->num_leds > 0) {
-        int j;
+        int j, k;
         char *triggers, *token;
         triggers = malloc(sizeof(char)*1024);
         int rc = get_trigger(l->leds[0].t_dev, triggers);
@@ -198,11 +200,11 @@ int leds_init(struct leds_t *l)
             if (token[0] == '[') {
                 int len = strlen(token) - 1;
                 l->triggers[j] = malloc(sizeof(char) * len);
-                for (int i = 0; i < len; i++) {
-                    if (i == len-1)
-                        l->triggers[j][i] = '\0';
+                for (k = 0; k < len; k++) {
+                    if (k == len-1)
+                        l->triggers[j][k] = '\0';
                     else
-                        l->triggers[j][i] = token[i+1];
+                        l->triggers[j][k] = token[k+1];
                 }
             } else {
                 l->triggers[j] = malloc(sizeof(char) * (strlen(token) + 1));
