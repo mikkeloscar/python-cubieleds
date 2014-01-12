@@ -4,7 +4,7 @@
 # 
 # Translate string to morsecode and morse it using the LED.
 
-import Cubie.leds as leds
+import cubie.leds as leds
 import time
 
 LEDS = ['blue', 'green']

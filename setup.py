@@ -20,6 +20,6 @@ setup(name          = 'cubieleds',
       url           = 'https://github.com/mikkeloscar/python-cubieleds',
       classifiers   = classifiers,
       packages      = find_packages(),
-      ext_modules   = [Extension('Cubie.leds', ['src/py_leds.c',
+      ext_modules   = [Extension('cubie.leds', ['src/py_leds.c',
                                                 'src/leds.c'])]
       )

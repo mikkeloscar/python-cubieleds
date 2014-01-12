@@ -191,7 +191,7 @@ static PyMethodDef module_methods[] = {
 #if PY_MAJOR_VERSION > 2
 static struct PyModuleDef cubieledsmodule = {
     PyModuleDef_HEAD_INIT,
-    "Cubie.leds",
+    "cubie.leds",
     module_docstring,
     -1,
     module_methods
@@ -209,7 +209,7 @@ PyMODINIT_FUNC initleds(void)
     if ((module = PyModule_Create(&cubieledsmodule)) == NULL)
         return NULL;
 #else
-    module = Py_InitModule3("Cubie.leds", module_methods, module_docstring);
+    module = Py_InitModule3("cubie.leds", module_methods, module_docstring);
     if (module == NULL)
         return;
 #endif

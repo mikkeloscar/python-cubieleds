@@ -28,25 +28,25 @@ If you are running Archlinux, PKGBUILDs for python2 and 3 are available
 The module is pretty simpel. This is how it works:
 
 ```python
->>> import Cubie.leds
+>>> import cubie.leds
 
 # turn on the blue LED
->>> Cubie.leds.on("blue")
+>>> cubie.leds.on("blue")
 True
 # check status of blue LED
->>> Cubie.leds.status("blue")
+>>> cubie.leds.status("blue")
 1
 # Turn off blue LED
->>> Cubie.leds.off("blue")
+>>> cubie.leds.off("blue")
 True
 # check status again
->>> Cubie.leds.status("blue")
+>>> cubie.leds.status("blue")
 0
 
 # It is also possible to add a trigger, eg. the mmc0 trigger which will make
 # the LED blink on SD card activity
->>> Cubie.leds.trigger("green", "mmc0")
+>>> cubie.leds.trigger("green", "mmc0")
 True
->>> Cubie.leds.trigger_status("green")
+>>> cubie.leds.trigger_status("green")
 'mmc0'
 ```

@@ -9,7 +9,7 @@ import sys
 import signal, time
 import subprocess
 import re
-import Cubie.leds as leds
+import cubie.leds as leds
 
 LEDS = ['blue', 'green']
 
